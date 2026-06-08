@@ -11,6 +11,7 @@ from jobforge.api.routes import (
     apply_assist,
     company,
     dashboard,
+    interviews,
     jobs,
     preferences,
     profile,
@@ -75,6 +76,7 @@ app.include_router(apply_assist.router, prefix="/applications", tags=["apply-ass
 app.include_router(company.router, prefix="/companies", tags=["companies"])
 app.include_router(skills.router, prefix="/skills", tags=["skills"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+app.include_router(interviews.router, tags=["interviews"])
 app.include_router(telegram.router, prefix="/telegram", tags=["telegram"])
 
 

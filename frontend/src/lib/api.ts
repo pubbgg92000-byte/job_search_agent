@@ -337,6 +337,139 @@ export function detectAtsPlatform(url: string | null | undefined): ApplyAssistSe
   return "unknown";
 }
 
+// Phase 3C — interview intelligence agent.
+
+export type InterviewStage = {
+  name: string;
+  description: string;
+  typical_duration_minutes: number;
+};
+
+export type InterviewRiskArea = {
+  topic: string;
+  reason: string;
+  severity: "low" | "medium" | "high";
+};
+
+export type InterviewPlan = {
+  id: number;
+  application_id: number;
+  stages: InterviewStage[];
+  technical_topics: string[];
+  behavioral_topics: string[];
+  company_prep: string[];
+  difficulty: "easy" | "medium" | "hard" | "very_hard";
+  confidence_score: number;
+  risk_areas: InterviewRiskArea[];
+  strengths: string[];
+  notes: string | null;
+  generated_at: string | null;
+  matched_skills?: string[];
+  missing_skills?: string[];
+};
+
+export type InterviewQuestion = {
+  id: number;
+  plan_id: number;
+  category: "technical" | "system_design" | "behavioral";
+  topic: string;
+  difficulty: "easy" | "medium" | "hard";
+  prompt: string;
+  answer_outline: string | null;
+};
+
+export type InterviewStudyBlock = {
+  day_label: string;
+  focus: string;
+  activities: string[];
+  duration_minutes: number;
+};
+
+export type InterviewStudyPlan = {
+  id: number;
+  plan_id: number;
+  horizon_days: 1 | 3 | 7 | 14;
+  total_hours: number;
+  blocks: InterviewStudyBlock[];
+  generated_at: string | null;
+};
+
+export type InterviewWeaknessReport = {
+  strengths: string[];
+  weaknesses: { skill: string; severity: "low" | "medium" | "high"; impact: number }[];
+  matched_skills: string[];
+  missing_skills: string[];
+  risk_areas: InterviewRiskArea[];
+};
+
+export type InterviewDashboard = {
+  generated_at: string;
+  upcoming_interviews: {
+    application_id: number;
+    company: string | null;
+    title: string | null;
+    status: string;
+    last_updated: string | null;
+  }[];
+  recent_plans: {
+    id: number;
+    application_id: number;
+    difficulty: string;
+    confidence_score: number;
+    generated_at: string | null;
+    technical_topics: string[];
+  }[];
+  risk_areas: { topic: string; count: number }[];
+  recommended_topics: string[];
+  recommended_horizon_days: 1 | 3 | 7 | 14;
+};
+
+export const interviewApi = {
+  generatePlan: (applicationId: number, withLlmNotes = false) =>
+    api.post<InterviewPlan>(
+      `/applications/${applicationId}/interview-prep/plan`,
+      { with_llm_notes: withLlmNotes },
+    ),
+  getLatestPlan: (applicationId: number) =>
+    api.get<InterviewPlan>(`/applications/${applicationId}/interview-prep/plan`),
+  listPlans: (applicationId: number) =>
+    api.get<{ items: InterviewPlan[]; total: number }>(
+      `/applications/${applicationId}/interview-prep/plans`,
+    ),
+  getWeaknesses: (applicationId: number) =>
+    api.get<InterviewWeaknessReport>(
+      `/applications/${applicationId}/interview-prep/weaknesses`,
+    ),
+  getPlan: (planId: number) => api.get<InterviewPlan>(`/interview-plans/${planId}`),
+  generateQuestions: (planId: number, technical_topics?: string[]) =>
+    api.post<{ items: InterviewQuestion[]; total: number }>(
+      `/interview-plans/${planId}/questions`,
+      technical_topics ? { technical_topics } : {},
+    ),
+  listQuestions: (
+    planId: number,
+    filters?: { category?: string; difficulty?: string },
+  ) => {
+    const q = new URLSearchParams();
+    if (filters?.category) q.set("category", filters.category);
+    if (filters?.difficulty) q.set("difficulty", filters.difficulty);
+    const qs = q.toString();
+    return api.get<{ items: InterviewQuestion[]; total: number }>(
+      `/interview-plans/${planId}/questions${qs ? `?${qs}` : ""}`,
+    );
+  },
+  generateStudyPlan: (planId: number, horizon_days: 1 | 3 | 7 | 14) =>
+    api.post<InterviewStudyPlan>(
+      `/interview-plans/${planId}/study-plan`,
+      { horizon_days },
+    ),
+  listStudyPlans: (planId: number) =>
+    api.get<{ items: InterviewStudyPlan[]; total: number }>(
+      `/interview-plans/${planId}/study-plans`,
+    ),
+  dashboard: () => api.get<InterviewDashboard>("/interview-prep/dashboard"),
+};
+
 export const applyAssistApi = {
   start: (applicationId: number) =>
     api.post<ApplyAssistEnvelope>(

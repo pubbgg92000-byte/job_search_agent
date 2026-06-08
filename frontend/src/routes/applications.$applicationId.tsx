@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 import { ApplicationTimeline, statusLabel, StatusBadge } from "@/components/application-timeline";
+import { InterviewPrepPanel } from "@/components/interview-prep-panel";
 import { Skeleton, PageError } from "@/components/ui/state";
 import { toast } from "@/lib/toast";
 
@@ -132,6 +133,8 @@ function ApplicationDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <InterviewPrepPanel applicationId={Number(applicationId)} />
 
       <Card>
         <CardHeader>

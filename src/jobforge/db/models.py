@@ -387,3 +387,86 @@ class ApplySession(Base):
         DateTime(timezone=True), nullable=True
     )
     extra_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
+
+# ---------------- Phase 3C: interview intelligence agent ----------------
+
+
+class InterviewPlan(Base):
+    """Generated preparation plan for one application's interview process.
+
+    Stored verbatim — regenerating is cheap (LLM-free for the structural
+    fields, deterministic) so we don't expose an explicit "stale" concept;
+    callers re-run :func:`jobforge.interview.engine.generate_plan` when they
+    want fresh output and a new row is inserted.
+    """
+
+    __tablename__ = "interview_plans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    stages: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    technical_topics: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    behavioral_topics: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    company_prep: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    difficulty: Mapped[str] = mapped_column(String(16), default="medium")
+    confidence_score: Mapped[int] = mapped_column(Integer, default=0)
+    risk_areas: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    strengths: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class InterviewQuestion(Base):
+    """One generated practice question, attached to an interview plan.
+
+    `topic` is free-form (e.g. "node-event-loop", "system-design", "behavioral").
+    `category` is the broad axis (technical / behavioral / system_design).
+    """
+
+    __tablename__ = "interview_questions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    plan_id: Mapped[int] = mapped_column(
+        ForeignKey("interview_plans.id", ondelete="CASCADE"), index=True
+    )
+    category: Mapped[str] = mapped_column(String(32), index=True)
+    topic: Mapped[str] = mapped_column(String(128))
+    difficulty: Mapped[str] = mapped_column(String(16), index=True)
+    prompt: Mapped[str] = mapped_column(Text)
+    answer_outline: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class InterviewStudyPlan(Base):
+    """Time-boxed study plan tied to an interview plan.
+
+    Horizon is one of `1`, `3`, `7`, `14` (days). Multiple horizons can be
+    stored for the same plan — UI picks the right one for the upcoming
+    interview date.
+    """
+
+    __tablename__ = "interview_study_plans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    plan_id: Mapped[int] = mapped_column(
+        ForeignKey("interview_plans.id", ondelete="CASCADE"), index=True
+    )
+    horizon_days: Mapped[int] = mapped_column(Integer, index=True)
+    blocks: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    total_hours: Mapped[int] = mapped_column(Integer, default=0)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "plan_id", "horizon_days", name="uq_interview_study_plans_plan_horizon"
+        ),
+    )
