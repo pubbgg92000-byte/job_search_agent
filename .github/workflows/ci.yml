@@ -35,6 +35,13 @@ jobs:
         run: uv sync --all-extras
       - name: Lint
         run: uv run ruff check .
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-pw-${{ hashFiles('uv.lock') }}
+      - name: Install Chromium for Playwright
+        run: uv run playwright install --with-deps chromium
       - name: Migrate
         run: uv run alembic upgrade head
       - name: Test
