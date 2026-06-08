@@ -1,0 +1,22 @@
+{
+  "jobs": [
+    {
+      "id": 4567890,
+      "title": "Senior Backend Engineer",
+      "absolute_url": "https://boards.greenhouse.io/acmecorp/jobs/4567890",
+      "updated_at": "2026-06-01T10:00:00Z",
+      "first_published": "2026-05-28T09:00:00Z",
+      "location": {"name": "San Francisco, CA"},
+      "content": "<p>We&#39;re hiring a <b>Senior Backend Engineer</b> to work on Python and PostgreSQL.</p><p>Salary $160,000 - $200,000. Remote-friendly.</p>",
+      "company": {"name": "Acme Corp"}
+    },
+    {
+      "id": 4567891,
+      "title": "Staff Frontend Engineer",
+      "absolute_url": "https://boards.greenhouse.io/acmecorp/jobs/4567891",
+      "updated_at": "2026-06-05T08:00:00Z",
+      "location": {"name": "Remote (US)"},
+      "content": "<p>Lead React migration efforts.</p>"
+    }
+  ]
+}

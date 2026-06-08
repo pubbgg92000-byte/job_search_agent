@@ -1,0 +1,18 @@
+Backend Engineer (Node.js) — Hyderabad (hybrid)
+
+We're scaling our payments platform and need a backend engineer comfortable working in Node.js + TypeScript across a microservices architecture.
+
+Required:
+- 3+ years of Node.js experience
+- TypeScript proficiency
+- Experience with PostgreSQL and Redis
+- Strong understanding of REST API design
+- Experience with Git workflows
+
+Preferred:
+- Kafka or other event streaming
+- Kubernetes
+- Experience with payments, fintech, or high-throughput systems
+- Familiarity with Prometheus / Grafana
+
+Location: Hyderabad (3 days in-office)

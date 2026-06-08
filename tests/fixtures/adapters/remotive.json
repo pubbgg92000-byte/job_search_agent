@@ -1,0 +1,25 @@
+{
+  "0-legal-notice": "Test fixture",
+  "job-count": 2,
+  "jobs": [
+    {
+      "id": 555111,
+      "url": "https://remotive.com/remote-jobs/software-dev/555111",
+      "title": "Backend Developer (Node.js)",
+      "company_name": "Remotive Co",
+      "candidate_required_location": "Europe",
+      "description": "<p>Build APIs in Node.js and PostgreSQL. Salary EUR 70000 - 90000.</p>",
+      "publication_date": "2026-06-01T08:00:00",
+      "salary": "EUR 70000 - 90000"
+    },
+    {
+      "id": 555222,
+      "url": "https://remotive.com/remote-jobs/software-dev/555222",
+      "title": "Frontend Developer (Svelte)",
+      "company_name": "SvelteWorks",
+      "candidate_required_location": "Worldwide",
+      "description": "<p>Svelte + Tailwind.</p>",
+      "publication_date": "2026-06-05T08:00:00"
+    }
+  ]
+}

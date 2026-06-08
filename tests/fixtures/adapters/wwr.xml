@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>We Work Remotely: Remote Programming Jobs</title>
+    <link>https://weworkremotely.com/categories/remote-programming-jobs</link>
+    <description>Test fixture</description>
+    <item>
+      <title>HappyCorp: Senior Ruby Developer</title>
+      <link>https://weworkremotely.com/remote-jobs/wwr-1</link>
+      <guid>wwr-1</guid>
+      <pubDate>Mon, 02 Jun 2026 12:00:00 +0000</pubDate>
+      <region>Anywhere</region>
+      <description><![CDATA[<p>Ruby on Rails role. Salary $130,000 - $170,000.</p>]]></description>
+    </item>
+    <item>
+      <title>Globex: Frontend Engineer (Svelte)</title>
+      <link>https://weworkremotely.com/remote-jobs/wwr-2</link>
+      <guid>wwr-2</guid>
+      <pubDate>Wed, 04 Jun 2026 12:00:00 +0000</pubDate>
+      <region>Europe</region>
+      <description><![CDATA[<p>Svelte + TypeScript.</p>]]></description>
+    </item>
+  </channel>
+</rss>

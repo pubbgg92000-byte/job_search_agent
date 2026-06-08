@@ -1,0 +1,23 @@
+Senior Full-Stack Developer (Svelte / Node.js) — Remote (India preferred)
+
+About the role:
+We're hiring a senior full-stack developer to lead frontend architecture on our SaaS platform. You'll work across SvelteKit, Node.js, and PostgreSQL, partnering with product to ship customer-facing features end-to-end.
+
+Required:
+- 4+ years of professional full-stack experience
+- Strong proficiency in Svelte / SvelteKit
+- Production experience with Node.js and TypeScript
+- Comfortable with PostgreSQL and SQL
+- Experience designing and consuming REST APIs
+
+Nice to have:
+- Docker / containerization
+- AWS or GCP
+- Experience with TanStack Query
+- A history of mentoring junior engineers
+
+Tech stack: Svelte, SvelteKit, Node.js, TypeScript, PostgreSQL, Docker, AWS, GitHub Actions, Playwright.
+
+Location: Remote (we're a distributed team; preference for IST overlap).
+
+Compensation: 25-40 LPA depending on experience.

@@ -1,0 +1,352 @@
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import (
+    ARRAY,
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255))
+    email: Mapped[str] = mapped_column(String(255), unique=True)
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    profiles: Mapped[list[Profile]] = relationship(back_populates="user")
+    jobs: Mapped[list[Job]] = relationship(back_populates="user")
+
+
+class Profile(Base):
+    __tablename__ = "profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    source_filename: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    raw_resume_text: Mapped[str] = mapped_column(Text)
+    parsed_json: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="profiles")
+
+
+class Job(Base):
+    __tablename__ = "jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    source: Mapped[str] = mapped_column(String(32), default="pasted")
+    url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    company: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    raw_jd_text: Mapped[str] = mapped_column(Text)
+    parsed_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="jobs")
+
+
+class TailoredArtifact(Base):
+    __tablename__ = "tailored_artifacts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), index=True)
+    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"), index=True)
+    tailored_resume_md: Mapped[str] = mapped_column(Text)
+    cover_letter_md: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ats_score: Mapped[int] = mapped_column(Integer, default=0)
+    missing_keywords: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    model_used: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Application(Base):
+    __tablename__ = "applications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    # Phase 1: when a tailoring pipeline run created the application, these reference
+    # the user-submitted JD + the resulting artifact. Phase 2B: applications can start
+    # as "Saved" with neither set, or be tied to a discovered_job instead.
+    job_id: Mapped[int | None] = mapped_column(ForeignKey("jobs.id"), nullable=True, index=True)
+    artifact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("tailored_artifacts.id"), nullable=True
+    )
+    discovered_job_id: Mapped[int | None] = mapped_column(
+        ForeignKey("discovered_jobs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    company: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    source: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    recruiter_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    recruiter_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    status: Mapped[str] = mapped_column(String(32), default="saved")
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    last_updated: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+# ---------------- Phase 2: job discovery ----------------
+
+
+class JobSource(Base):
+    """Configured ingestion source (a Greenhouse board, a Lever org, etc.)."""
+
+    __tablename__ = "job_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32))
+    slug: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    display_name: Mapped[str] = mapped_column(String(255))
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    config_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (UniqueConstraint("kind", "slug", name="uq_job_sources_kind_slug"),)
+
+
+class DiscoveredJob(Base):
+    """A job listing pulled from a source. Distinct from `jobs` (user-submitted JDs)."""
+
+    __tablename__ = "discovered_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source: Mapped[str] = mapped_column(String(32), index=True)
+    source_job_id: Mapped[str] = mapped_column(String(255))
+    source_id: Mapped[int | None] = mapped_column(
+        ForeignKey("job_sources.id", ondelete="SET NULL"), nullable=True
+    )
+    company: Mapped[str] = mapped_column(String(255), index=True)
+    title: Mapped[str] = mapped_column(String(512))
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    remote: Mapped[bool] = mapped_column(Boolean, default=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    url: Mapped[str] = mapped_column(String(2048))
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    salary_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    salary_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    salary_currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("source", "source_job_id", name="uq_discovered_jobs_source_id"),
+    )
+
+
+class JobMatch(Base):
+    __tablename__ = "job_matches"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    discovered_job_id: Mapped[int] = mapped_column(
+        ForeignKey("discovered_jobs.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE")
+    )
+    score: Mapped[int] = mapped_column(Integer)
+    skill_match: Mapped[int] = mapped_column(Integer)
+    seniority_match: Mapped[int] = mapped_column(Integer)
+    location_match: Mapped[int] = mapped_column(Integer)
+    remote_match: Mapped[int] = mapped_column(Integer)
+    salary_match: Mapped[int] = mapped_column(Integer)
+    freshness: Mapped[int] = mapped_column(Integer)
+    missing_skills: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "discovered_job_id", "profile_id",
+            name="uq_job_matches_user_job_profile",
+        ),
+    )
+
+
+class JobSyncRun(Base):
+    __tablename__ = "job_sync_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source: Mapped[str] = mapped_column(String(32), index=True)
+    source_id: Mapped[int | None] = mapped_column(
+        ForeignKey("job_sources.id", ondelete="SET NULL"), nullable=True
+    )
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    status: Mapped[str] = mapped_column(String(16), default="running")
+    discovered_count: Mapped[int] = mapped_column(Integer, default=0)
+    inserted_count: Mapped[int] = mapped_column(Integer, default=0)
+    updated_count: Mapped[int] = mapped_column(Integer, default=0)
+    skipped_count: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+# ---------------- Phase 2B: career OS ----------------
+
+
+class UserPreferences(Base):
+    __tablename__ = "user_preferences"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True
+    )
+    preferred_locations: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    remote_only: Mapped[bool] = mapped_column(Boolean, default=True)
+    salary_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    salary_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    salary_currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    preferred_roles: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    preferred_skills: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    excluded_companies: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    excluded_keywords: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CompanyProfile(Base):
+    __tablename__ = "company_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True)
+    website: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    industry: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    company_size: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    funding_stage: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    remote_policy: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    growth_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    risk_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    apply_recommendation: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    raw_signals: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    last_updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class ApplicationEvent(Base):
+    __tablename__ = "application_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(32))
+    from_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    to_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class Interview(Base):
+    __tablename__ = "interviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    round_number: Mapped[int] = mapped_column(Integer, default=1)
+    kind: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    scheduled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    interviewer: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    outcome: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Offer(Base):
+    __tablename__ = "offers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), unique=True
+    )
+    base_salary: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bonus: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    equity: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    received_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    decision_deadline: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class SkillGapSnapshot(Base):
+    __tablename__ = "skill_gap_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    jobs_considered: Mapped[int] = mapped_column(Integer, default=0)
+    gaps_json: Mapped[dict[str, Any]] = mapped_column(JSON)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

@@ -1,0 +1,29 @@
+[
+  {
+    "legal": "https://remoteok.com/legal",
+    "disclaimer": "RemoteOK API"
+  },
+  {
+    "id": "rok-1",
+    "slug": "rok-1",
+    "position": "Senior Rust Engineer",
+    "company": "CrabCorp",
+    "location": "Worldwide",
+    "url": "https://remoteok.com/remote-jobs/rok-1",
+    "description": "<p>Work on Rust services.</p>",
+    "date": "2026-06-04T08:00:00Z",
+    "salary_min": 120000,
+    "salary_max": 160000
+  },
+  {
+    "id": "rok-2",
+    "slug": "rok-2",
+    "position": "Junior Python Developer",
+    "company": "PyShop",
+    "url": "https://remoteok.com/remote-jobs/rok-2",
+    "description": "<p>Junior python role.</p>",
+    "epoch": 1748000000,
+    "salary_min": 0,
+    "salary_max": 0
+  }
+]

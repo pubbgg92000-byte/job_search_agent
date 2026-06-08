@@ -1,0 +1,29 @@
+[
+  {
+    "id": "abc-123",
+    "text": "Senior Software Engineer",
+    "hostedUrl": "https://jobs.lever.co/exampleco/abc-123",
+    "applyUrl": "https://jobs.lever.co/exampleco/abc-123/apply",
+    "createdAt": 1748000000000,
+    "categories": {
+      "location": "Remote — Worldwide",
+      "team": "Backend",
+      "commitment": "Full-time",
+      "workplaceType": "remote"
+    },
+    "descriptionPlain": "Build distributed systems with Go and Kubernetes. Salary $140,000 - $180,000."
+  },
+  {
+    "id": "def-456",
+    "text": "Product Designer",
+    "hostedUrl": "https://jobs.lever.co/exampleco/def-456",
+    "createdAt": 1749000000000,
+    "categories": {
+      "location": "New York, NY",
+      "team": "Design",
+      "commitment": "Full-time",
+      "workplaceType": "onsite"
+    },
+    "descriptionPlain": "Lead product design for our SaaS suite."
+  }
+]
