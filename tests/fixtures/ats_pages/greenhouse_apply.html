@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Greenhouse — Apply (mock)</title>
+</head>
+<body>
+  <div id="application_form">
+    <h1>Apply for Software Engineer</h1>
+    <form id="application-form" method="post" action="/greenhouse/submit" enctype="multipart/form-data">
+      <label>
+        First Name
+        <input type="text" name="first_name" autocomplete="given-name" required>
+      </label>
+      <label>
+        Last Name
+        <input type="text" name="last_name" autocomplete="family-name" required>
+      </label>
+      <label>
+        Email
+        <input type="email" name="email" required>
+      </label>
+      <label>
+        Phone
+        <input type="tel" name="phone">
+      </label>
+      <label>
+        Location
+        <input type="text" name="job_application[location]">
+      </label>
+      <label>
+        Resume
+        <input type="file" name="resume" id="resume" accept=".pdf,.doc,.docx" required>
+      </label>
+      <label>
+        Cover Letter
+        <input type="file" name="cover_letter" id="cover_letter" accept=".pdf,.doc,.docx">
+      </label>
+      <label>
+        LinkedIn
+        <input type="url" name="job_application[answers_attributes][0][text_value]" aria-label="LinkedIn URL">
+      </label>
+      <input type="submit" value="Submit Application">
+    </form>
+  </div>
+</body>
+</html>

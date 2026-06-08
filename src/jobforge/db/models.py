@@ -350,3 +350,40 @@ class SkillGapSnapshot(Base):
     computed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+# ---------------- Phase 3B: browser application agent ----------------
+
+
+class ApplySession(Base):
+    """One browser-driven attempt to submit an application.
+
+    Multiple sessions can exist per application (re-tries). State machine is
+    owned by `application_agent.browser.runner`; this table is the durable
+    audit copy. The live `playwright.async_api.BrowserContext` lives in an
+    in-memory registry (`application_agent.browser.session`) — only its state
+    snapshots persist here.
+    """
+
+    __tablename__ = "apply_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    platform: Mapped[str] = mapped_column(String(16))
+    state: Mapped[str] = mapped_column(String(32), default="in_progress", index=True)
+    headless: Mapped[bool] = mapped_column(Boolean, default=True)
+    job_url: Mapped[str] = mapped_column(String(2048))
+    screenshot_paths: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    ready_for_review_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    extra_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)

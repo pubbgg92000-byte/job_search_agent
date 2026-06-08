@@ -8,6 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from jobforge.api.routes import (
     applications,
+    apply_assist,
     company,
     dashboard,
     jobs,
@@ -70,6 +71,7 @@ app.include_router(tailor.router, prefix="/tailor", tags=["tailor"])
 app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(preferences.router, prefix="/preferences", tags=["preferences"])
 app.include_router(applications.router, prefix="/applications", tags=["applications"])
+app.include_router(apply_assist.router, prefix="/applications", tags=["apply-assist"])
 app.include_router(company.router, prefix="/companies", tags=["companies"])
 app.include_router(skills.router, prefix="/skills", tags=["skills"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])

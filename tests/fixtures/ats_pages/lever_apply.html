@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Lever — Apply (mock)</title>
+</head>
+<body>
+  <div class="posting-page">
+    <h1>Apply: Senior Engineer</h1>
+    <form id="application-form" method="post" action="/lever/submit" enctype="multipart/form-data">
+      <label>
+        Full Name
+        <input type="text" name="name" autocomplete="name" required>
+      </label>
+      <label>
+        Email
+        <input type="email" name="email" required>
+      </label>
+      <label>
+        Phone
+        <input type="tel" name="phone">
+      </label>
+      <label>
+        Location
+        <input type="text" name="location">
+      </label>
+      <label>
+        LinkedIn URL
+        <input type="url" name="urls[LinkedIn]" aria-label="LinkedIn URL">
+      </label>
+      <label>
+        Resume
+        <input type="file" name="resume" accept=".pdf,.doc,.docx" required>
+      </label>
+      <label>
+        Additional Information
+        <textarea name="additionalInformation" rows="6"></textarea>
+      </label>
+      <button type="submit" data-qa="btn-submit">Submit application</button>
+    </form>
+  </div>
+</body>
+</html>

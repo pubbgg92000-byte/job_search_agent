@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     company_research_endpoint: str | None = None
     company_news_endpoint: str | None = None
 
+    # Phase 3B: browser application agent.
+    apply_assist_headless: bool = True
+    apply_assist_session_ttl_seconds: int = 900
+    apply_assist_max_concurrent: int = 1
+    apply_assist_screenshot_dir: Path = Path("./artifacts/apply_assist")
+    apply_assist_step_timeout_ms: int = 15000
+
 
 _settings: Settings | None = None
 
@@ -44,4 +51,5 @@ def get_settings() -> Settings:
     if _settings is None:
         _settings = Settings()  # type: ignore[call-arg]
         _settings.artifacts_dir.mkdir(parents=True, exist_ok=True)
+        _settings.apply_assist_screenshot_dir.mkdir(parents=True, exist_ok=True)
     return _settings
