@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from jobforge.api.routes import (
+    analytics,
     applications,
     apply_assist,
     company,
@@ -79,6 +80,7 @@ app.include_router(skills.router, prefix="/skills", tags=["skills"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(interviews.router, tags=["interviews"])
 app.include_router(outreach.router, prefix="/outreach", tags=["outreach"])
+app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 app.include_router(telegram.router, prefix="/telegram", tags=["telegram"])
 
 

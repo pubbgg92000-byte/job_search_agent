@@ -235,6 +235,36 @@ async def _cmd_gaps(args: list[str]) -> str:
     return "\n".join(lines)
 
 
+async def _cmd_summary(args: list[str]) -> str:
+    settings = get_settings()
+    # Defer the import — keeps the analytics module out of the bot's hot path
+    # for users who never call /summary.
+    from jobforge.analytics import build_recommendations, compute_funnel
+
+    funnel = await compute_funnel(settings.sole_user_id)
+    recs = await build_recommendations(settings.sole_user_id)
+    s = funnel.stages
+    c = funnel.conversions
+    lines = [
+        "JobForge analytics summary",
+        "",
+        f"Applications: {s.applications_created} (submitted: {s.applications_submitted})",
+        f"Interviews: {s.interviews_scheduled} scheduled, {s.interviews_completed} completed",
+        f"Offers: {s.offers_received} received, {s.offers_accepted} accepted",
+        "",
+        "Conversion rates:",
+        f"- Apply → reply: {c.apply_to_reply * 100:.0f}%",
+        f"- Apply → interview: {c.apply_to_interview * 100:.0f}%",
+        f"- Interview → offer: {c.interview_to_offer * 100:.0f}%",
+    ]
+    if recs.items:
+        lines.append("")
+        lines.append("Recommendations:")
+        for r in recs.items[:3]:
+            lines.append(f"- {r.title}")
+    return "\n".join(lines)
+
+
 async def _cmd_outreach(args: list[str]) -> str:
     limit = _parse_int(args, default=5, lo=1, hi=20)
     settings = get_settings()
@@ -297,6 +327,7 @@ async def _cmd_help(args: list[str]) -> str:
         "/outreach [n] — campaigns + response rate\n"
         "/replies [n] — recent replies\n"
         "/followups [n] — outreach follow-ups due\n"
+        "/summary — analytics + recommendations\n"
         "/help — this message"
     )
 
@@ -323,6 +354,7 @@ def build_default_bot() -> TelegramBot:
             "outreach": _cmd_outreach,
             "replies": _cmd_replies,
             "followups": _cmd_followups,
+            "summary": _cmd_summary,
             "help": _cmd_help,
             "start": _cmd_help,
         }

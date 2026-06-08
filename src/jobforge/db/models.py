@@ -615,3 +615,47 @@ class MessageEvent(Base):
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
+
+
+# ---------------- Phase 3E: career analytics ----------------
+
+
+class AnalyticsSnapshot(Base):
+    """Daily aggregate of the funnel for trend charts.
+
+    One row per (user_id, snapshot_date). Rebuilt by
+    :func:`jobforge.analytics.snapshots.record_daily_snapshot` (idempotent —
+    re-running on the same date updates the existing row).
+    """
+
+    __tablename__ = "analytics_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    snapshot_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
+    jobs_discovered: Mapped[int] = mapped_column(Integer, default=0)
+    jobs_saved: Mapped[int] = mapped_column(Integer, default=0)
+    applications_created: Mapped[int] = mapped_column(Integer, default=0)
+    applications_submitted: Mapped[int] = mapped_column(Integer, default=0)
+    messages_sent: Mapped[int] = mapped_column(Integer, default=0)
+    recruiter_replies: Mapped[int] = mapped_column(Integer, default=0)
+    interviews_scheduled: Mapped[int] = mapped_column(Integer, default=0)
+    interviews_completed: Mapped[int] = mapped_column(Integer, default=0)
+    offers_received: Mapped[int] = mapped_column(Integer, default=0)
+    offers_accepted: Mapped[int] = mapped_column(Integer, default=0)
+    rejections: Mapped[int] = mapped_column(Integer, default=0)
+    extra_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "snapshot_date",
+            name="uq_analytics_snapshots_user_date",
+        ),
+    )

@@ -682,6 +682,164 @@ export const outreachApi = {
     api.get<{ items: OutreachCampaign[]; total: number }>("/outreach/replies"),
 };
 
+// Phase 3E — career analytics.
+
+export type FunnelStages = {
+  jobs_discovered: number;
+  jobs_saved: number;
+  applications_created: number;
+  applications_submitted: number;
+  messages_sent: number;
+  recruiter_replies: number;
+  interviews_scheduled: number;
+  interviews_completed: number;
+  offers_received: number;
+  offers_accepted: number;
+  rejections: number;
+};
+
+export type ConversionRates = {
+  discovery_to_apply: number;
+  apply_to_reply: number;
+  apply_to_interview: number;
+  interview_to_offer: number;
+  offer_to_acceptance: number;
+};
+
+export type AnalyticsFunnel = {
+  stages: FunnelStages;
+  conversions: ConversionRates;
+};
+
+export type SourceRow = {
+  source: string;
+  applications: number;
+  interviews: number;
+  offers: number;
+  acceptances: number;
+  interview_rate: number;
+  offer_rate: number;
+};
+
+export type SourceReport = {
+  total_applications: number;
+  best_source_for_interviews: string | null;
+  rows: SourceRow[];
+};
+
+export type ResumeRow = {
+  artifact_id: number;
+  model_used: string;
+  ats_score: number;
+  created_at: string | null;
+  applications: number;
+  interviews: number;
+  offers: number;
+  acceptances: number;
+  interview_rate: number;
+  offer_rate: number;
+};
+
+export type ResumeReport = {
+  total_artifacts: number;
+  top_performing_artifact: ResumeRow | null;
+  rows: ResumeRow[];
+};
+
+export type OutreachKindRow = {
+  kind: string;
+  sent: number;
+  replied: number;
+  interviews: number;
+  response_rate: number;
+};
+
+export type OutreachCompanyRow = {
+  company: string;
+  campaigns: number;
+  sent: number;
+  replied: number;
+  interviews: number;
+  response_rate: number;
+};
+
+export type FollowUpEffectiveness = {
+  campaigns_with_follow_up: number;
+  campaigns_without_follow_up: number;
+  reply_rate_with_follow_up: number;
+  reply_rate_without_follow_up: number;
+  follow_up_lift: number;
+};
+
+export type OutreachReport = {
+  by_kind: OutreachKindRow[];
+  by_company: OutreachCompanyRow[];
+  follow_up: FollowUpEffectiveness;
+};
+
+export type AnalyticsCompanyRow = {
+  company: string;
+  applications: number;
+  interviews: number;
+  offers: number;
+};
+
+export type SkillTrendPoint = {
+  computed_at: string;
+  jobs_considered: number;
+  top_skills: { skill: string; importance_score: number; frequency: number }[];
+};
+
+export type AnalyticsRecommendation = {
+  kind: string;
+  title: string;
+  detail: string;
+  confidence: "low" | "medium" | "high";
+  extra: Record<string, unknown>;
+};
+
+export type AnalyticsSnapshotRow = FunnelStages & {
+  id: number;
+  snapshot_date: string;
+};
+
+export type AnalyticsDashboard = {
+  funnel: AnalyticsFunnel;
+  sources: SourceReport;
+  resumes: ResumeReport;
+  outreach: OutreachReport;
+  top_companies: AnalyticsCompanyRow[];
+  skill_trend: SkillTrendPoint[];
+  snapshots: AnalyticsSnapshotRow[];
+  recommendations: { items: AnalyticsRecommendation[]; total: number };
+};
+
+export const analyticsApi = {
+  funnel: () => api.get<AnalyticsFunnel>("/analytics/funnel"),
+  sources: () => api.get<SourceReport>("/analytics/sources"),
+  resumes: () => api.get<ResumeReport>("/analytics/resumes"),
+  outreach: () => api.get<OutreachReport>("/analytics/outreach"),
+  companies: () =>
+    api.get<{ items: AnalyticsCompanyRow[]; total: number }>(
+      "/analytics/companies",
+    ),
+  skillTrends: () =>
+    api.get<{ items: SkillTrendPoint[]; total: number }>(
+      "/analytics/skill-trends",
+    ),
+  recommendations: () =>
+    api.get<{ items: AnalyticsRecommendation[]; total: number }>(
+      "/analytics/recommendations",
+    ),
+  recordSnapshot: () =>
+    api.post<AnalyticsSnapshotRow>("/analytics/snapshots", {}),
+  listSnapshots: () =>
+    api.get<{ items: AnalyticsSnapshotRow[]; total: number }>(
+      "/analytics/snapshots",
+    ),
+  dashboard: () => api.get<AnalyticsDashboard>("/analytics/dashboard"),
+};
+
 export const applyAssistApi = {
   start: (applicationId: number) =>
     api.post<ApplyAssistEnvelope>(
