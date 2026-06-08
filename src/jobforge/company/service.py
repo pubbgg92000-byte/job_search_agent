@@ -8,7 +8,6 @@ ride inside the existing `raw_signals` JSON column.
 """
 from __future__ import annotations
 
-from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from typing import Any
 

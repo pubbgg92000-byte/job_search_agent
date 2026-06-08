@@ -1,12 +1,9 @@
 """Phase 3B tests — providers, scoring extensions, research agent, caching."""
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from datetime import timedelta
 
 import httpx
-import pytest
 from sqlalchemy import delete
 
 from jobforge.agents_phase3.company_research import DeterministicResearchAgent
