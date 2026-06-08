@@ -470,6 +470,218 @@ export const interviewApi = {
   dashboard: () => api.get<InterviewDashboard>("/interview-prep/dashboard"),
 };
 
+// Phase 3D — recruiter outreach agent.
+
+export type OutreachContactKind =
+  | "recruiter"
+  | "talent_partner"
+  | "hiring_manager"
+  | "engineer";
+
+export type OutreachContact = {
+  id: number;
+  user_id: number;
+  company: string;
+  name: string;
+  kind: OutreachContactKind;
+  role: string | null;
+  linkedin_url: string | null;
+  email: string | null;
+  phone: string | null;
+  source: string;
+  confidence: number;
+  notes: string | null;
+  created_at: string;
+  last_updated_at: string;
+};
+
+export type OutreachStatus =
+  | "drafted"
+  | "sent"
+  | "replied"
+  | "ignored"
+  | "interview"
+  | "closed";
+
+export type OutreachCampaign = {
+  id: number;
+  user_id: number;
+  contact_id: number;
+  application_id: number | null;
+  interview_plan_id: number | null;
+  goal: string;
+  status: OutreachStatus;
+  follow_up_due_at: string | null;
+  last_event_at: string | null;
+  notes: string | null;
+  created_at: string;
+  last_updated_at: string;
+};
+
+export type OutreachMessage = {
+  id: number;
+  campaign_id: number;
+  kind: string;
+  channel: string;
+  subject: string | null;
+  body: string;
+  sent_at: string | null;
+  replied_at: string | null;
+  template_version: string;
+  polish_model: string | null;
+  extra_json: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type OutreachEvent = {
+  id: number;
+  campaign_id: number;
+  message_id: number | null;
+  event_type: string;
+  from_status: string | null;
+  to_status: string | null;
+  notes: string | null;
+  occurred_at: string;
+};
+
+export type OutreachCampaignDetail = OutreachCampaign & {
+  events: OutreachEvent[];
+  messages: OutreachMessage[];
+};
+
+export type OutreachMetrics = {
+  total_campaigns: number;
+  by_status: Record<string, number>;
+  sent: number;
+  replied: number;
+  interviews: number;
+  response_rate: number;
+  interview_rate: number;
+  referral_rate: number;
+};
+
+export type OutreachDashboard = {
+  metrics: OutreachMetrics;
+  due_follow_ups: OutreachCampaign[];
+  recent_replies: OutreachCampaign[];
+  recent_contacts: OutreachContact[];
+  recent_campaigns: OutreachCampaign[];
+};
+
+export type DraftMessagePayload = {
+  kind: string;
+  channel?: string;
+  company?: string;
+  contact_name?: string;
+  role_title?: string;
+  candidate_name?: string;
+  candidate_headline?: string;
+  candidate_years_experience?: number;
+  top_skills?: string[];
+  matched_skills?: string[];
+  company_summary?: string;
+  company_industry?: string;
+  referral_target?: string;
+  previous_message_kind?: string;
+  days_since_last_message?: number;
+  interview_topic?: string;
+  interview_round?: string;
+  contact_role?: string;
+  contact_kind?: string;
+};
+
+export const outreachApi = {
+  listContacts: (params?: { company?: string; kind?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.company) q.set("company", params.company);
+    if (params?.kind) q.set("kind", params.kind);
+    const qs = q.toString();
+    return api.get<{ items: OutreachContact[]; total: number }>(
+      `/outreach/contacts${qs ? `?${qs}` : ""}`,
+    );
+  },
+  upsertContact: (payload: {
+    company: string;
+    name: string;
+    kind?: string;
+    role?: string;
+    linkedin_url?: string;
+    email?: string;
+    phone?: string;
+    source?: string;
+    confidence?: number;
+    notes?: string;
+  }) => api.post<OutreachContact>("/outreach/contacts", payload),
+  deleteContact: (id: number) =>
+    fetch(`${BASE}/outreach/contacts/${id}`, { method: "DELETE" }).then((r) =>
+      r.json() as Promise<{ deleted: number }>,
+    ),
+  discoverContacts: (payload: {
+    company: string;
+    seeds?: {
+      company: string;
+      name: string;
+      kind?: string;
+      role?: string;
+      linkedin_url?: string;
+      email?: string;
+    }[];
+    use_web_research?: boolean;
+  }) =>
+    api.post<{ items: OutreachContact[]; total: number }>(
+      "/outreach/contacts/discover",
+      payload,
+    ),
+  listCampaigns: (params?: { status?: string; contact_id?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.status) q.set("status", params.status);
+    if (params?.contact_id) q.set("contact_id", String(params.contact_id));
+    const qs = q.toString();
+    return api.get<{ items: OutreachCampaign[]; total: number }>(
+      `/outreach/campaigns${qs ? `?${qs}` : ""}`,
+    );
+  },
+  createCampaign: (payload: {
+    contact_id: number;
+    application_id?: number;
+    interview_plan_id?: number;
+    goal?: string;
+    notes?: string;
+  }) => api.post<OutreachCampaign>("/outreach/campaigns", payload),
+  getCampaign: (id: number) =>
+    api.get<OutreachCampaignDetail>(`/outreach/campaigns/${id}`),
+  patchCampaignStatus: (id: number, status: string, notes?: string) =>
+    api.patch<OutreachCampaign>(`/outreach/campaigns/${id}/status`, {
+      status,
+      notes,
+    }),
+  draftMessage: (campaignId: number, payload: DraftMessagePayload) =>
+    api.post<OutreachMessage>(
+      `/outreach/campaigns/${campaignId}/messages`,
+      payload,
+    ),
+  previewMessage: (payload: DraftMessagePayload) =>
+    api.post<{
+      kind: string;
+      subject: string | null;
+      body: string;
+      channel: string;
+      template_version: string;
+      fields_used: Record<string, unknown>;
+    }>("/outreach/messages/preview", payload),
+  markSent: (campaignId: number, messageId: number, followUpInDays = 7) =>
+    api.post<OutreachCampaign>(
+      `/outreach/campaigns/${campaignId}/messages/${messageId}/sent`,
+      { follow_up_in_days: followUpInDays },
+    ),
+  dashboard: () => api.get<OutreachDashboard>("/outreach/dashboard"),
+  metrics: () => api.get<OutreachMetrics>("/outreach/metrics"),
+  followUps: () =>
+    api.get<{ items: OutreachCampaign[]; total: number }>("/outreach/follow-ups"),
+  replies: () =>
+    api.get<{ items: OutreachCampaign[]; total: number }>("/outreach/replies"),
+};
+
 export const applyAssistApi = {
   start: (applicationId: number) =>
     api.post<ApplyAssistEnvelope>(

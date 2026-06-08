@@ -470,3 +470,148 @@ class InterviewStudyPlan(Base):
             "plan_id", "horizon_days", name="uq_interview_study_plans_plan_horizon"
         ),
     )
+
+
+# ---------------- Phase 3D: recruiter outreach agent ----------------
+
+
+class RecruiterContact(Base):
+    """A person we want to contact at a company.
+
+    `kind` is one of `recruiter`, `talent_partner`, `hiring_manager`,
+    `engineer`. Identity is `(company, normalized name)` so re-running
+    discovery on the same company does not duplicate rows — see
+    `_norm_name` in `outreach/contacts.py`.
+    """
+
+    __tablename__ = "recruiter_contacts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    company: Mapped[str] = mapped_column(String(255), index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    kind: Mapped[str] = mapped_column(String(32), default="recruiter", index=True)
+    role: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    linkedin_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source: Mapped[str] = mapped_column(String(64), default="manual")
+    confidence: Mapped[int] = mapped_column(Integer, default=50)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    extra_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    last_updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "company", "name",
+            name="uq_recruiter_contacts_user_company_name",
+        ),
+    )
+
+
+class OutreachCampaign(Base):
+    """One outreach effort.
+
+    Always tied to a contact. Optional `application_id` (when the campaign
+    targets a specific role) and `interview_plan_id` (when the campaign is
+    follow-up tied to a scheduled interview). Status flow lives in
+    `outreach/status.py`.
+    """
+
+    __tablename__ = "outreach_campaigns"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    contact_id: Mapped[int] = mapped_column(
+        ForeignKey("recruiter_contacts.id", ondelete="CASCADE"), index=True
+    )
+    application_id: Mapped[int | None] = mapped_column(
+        ForeignKey("applications.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    interview_plan_id: Mapped[int | None] = mapped_column(
+        ForeignKey("interview_plans.id", ondelete="SET NULL"), nullable=True
+    )
+    goal: Mapped[str] = mapped_column(String(32), default="initial_outreach")
+    status: Mapped[str] = mapped_column(String(32), default="drafted", index=True)
+    last_event_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    follow_up_due_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    last_updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class RecruiterMessage(Base):
+    """A drafted/sent message inside a campaign.
+
+    `kind` matches the message-generator family (initial_outreach,
+    referral_request, hiring_manager_intro, follow_up, thank_you). Messages
+    are immutable once `sent_at` is set — we never edit a sent message in
+    place, we add a new one.
+    """
+
+    __tablename__ = "recruiter_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    campaign_id: Mapped[int] = mapped_column(
+        ForeignKey("outreach_campaigns.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(32), index=True)
+    channel: Mapped[str] = mapped_column(String(16), default="linkedin")
+    subject: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    body: Mapped[str] = mapped_column(Text)
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    replied_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    template_version: Mapped[str] = mapped_column(String(16), default="v1")
+    polish_model: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    extra_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class MessageEvent(Base):
+    """Immutable event log for an outreach campaign.
+
+    `event_type` covers: drafted, sent, replied, ignored, interview, closed,
+    follow_up_due, follow_up_sent. Some events reference a specific message;
+    others (status changes, follow-up scheduling) reference the campaign as
+    a whole.
+    """
+
+    __tablename__ = "message_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    campaign_id: Mapped[int] = mapped_column(
+        ForeignKey("outreach_campaigns.id", ondelete="CASCADE"), index=True
+    )
+    message_id: Mapped[int | None] = mapped_column(
+        ForeignKey("recruiter_messages.id", ondelete="SET NULL"), nullable=True
+    )
+    event_type: Mapped[str] = mapped_column(String(32), index=True)
+    from_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    to_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )

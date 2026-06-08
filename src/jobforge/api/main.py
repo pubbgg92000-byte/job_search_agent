@@ -13,6 +13,7 @@ from jobforge.api.routes import (
     dashboard,
     interviews,
     jobs,
+    outreach,
     preferences,
     profile,
     skills,
@@ -77,6 +78,7 @@ app.include_router(company.router, prefix="/companies", tags=["companies"])
 app.include_router(skills.router, prefix="/skills", tags=["skills"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(interviews.router, tags=["interviews"])
+app.include_router(outreach.router, prefix="/outreach", tags=["outreach"])
 app.include_router(telegram.router, prefix="/telegram", tags=["telegram"])
 
 

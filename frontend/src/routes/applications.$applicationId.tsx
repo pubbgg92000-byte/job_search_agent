@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 import { ApplicationTimeline, statusLabel, StatusBadge } from "@/components/application-timeline";
 import { InterviewPrepPanel } from "@/components/interview-prep-panel";
+import { OutreachPanel } from "@/components/outreach-panel";
 import { Skeleton, PageError } from "@/components/ui/state";
 import { toast } from "@/lib/toast";
 
@@ -135,6 +136,8 @@ function ApplicationDetailPage() {
       </Card>
 
       <InterviewPrepPanel applicationId={Number(applicationId)} />
+
+      <OutreachPanel applicationId={Number(applicationId)} company={a.company} />
 
       <Card>
         <CardHeader>

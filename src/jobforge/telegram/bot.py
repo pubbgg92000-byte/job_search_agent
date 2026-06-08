@@ -235,6 +235,56 @@ async def _cmd_gaps(args: list[str]) -> str:
     return "\n".join(lines)
 
 
+async def _cmd_outreach(args: list[str]) -> str:
+    limit = _parse_int(args, default=5, lo=1, hi=20)
+    settings = get_settings()
+    from jobforge.outreach import compute_metrics, list_campaigns
+
+    metrics = await compute_metrics(settings.sole_user_id)
+    total, rows = await list_campaigns(settings.sole_user_id, limit=limit)
+    if total == 0:
+        return "No outreach campaigns yet — draft one via /outreach/contacts in the app."
+    lines = [
+        f"Outreach: {metrics.sent} sent, {metrics.replied} replied "
+        f"({metrics.response_rate * 100:.0f}%), {metrics.interviews} interview.",
+        "",
+        f"Recent {len(rows)} campaign(s):",
+    ]
+    for r in rows:
+        lines.append(f"- #{r.id} → contact {r.contact_id} [{r.status}] (goal: {r.goal})")
+    return "\n".join(lines)
+
+
+async def _cmd_replies(args: list[str]) -> str:
+    limit = _parse_int(args, default=5, lo=1, hi=20)
+    settings = get_settings()
+    from jobforge.outreach import list_recent_replies
+
+    rows = await list_recent_replies(settings.sole_user_id, limit=limit)
+    if not rows:
+        return "No replies yet."
+    lines = [f"Last {len(rows)} reply/interview campaign(s):"]
+    for r in rows:
+        when = r.last_event_at.strftime("%Y-%m-%d") if r.last_event_at else "—"
+        lines.append(f"- #{r.id} [{r.status}] (last event {when})")
+    return "\n".join(lines)
+
+
+async def _cmd_followups(args: list[str]) -> str:
+    limit = _parse_int(args, default=10, lo=1, hi=50)
+    settings = get_settings()
+    from jobforge.outreach import list_due_follow_ups
+
+    rows = await list_due_follow_ups(settings.sole_user_id, limit=limit)
+    if not rows:
+        return "No follow-ups due. Good job staying on top of the inbox."
+    lines = [f"Follow-ups due ({len(rows)}):"]
+    for r in rows:
+        due = r.follow_up_due_at.strftime("%Y-%m-%d") if r.follow_up_due_at else "—"
+        lines.append(f"- #{r.id} due {due} (contact {r.contact_id})")
+    return "\n".join(lines)
+
+
 async def _cmd_help(args: list[str]) -> str:
     return (
         "Commands:\n"
@@ -244,6 +294,9 @@ async def _cmd_help(args: list[str]) -> str:
         "/interviews — interview-stage apps\n"
         "/stats — application funnel\n"
         "/gaps — top missing skills\n"
+        "/outreach [n] — campaigns + response rate\n"
+        "/replies [n] — recent replies\n"
+        "/followups [n] — outreach follow-ups due\n"
         "/help — this message"
     )
 
@@ -267,6 +320,9 @@ def build_default_bot() -> TelegramBot:
             "interviews": _cmd_interviews,
             "stats": _cmd_stats,
             "gaps": _cmd_gaps,
+            "outreach": _cmd_outreach,
+            "replies": _cmd_replies,
+            "followups": _cmd_followups,
             "help": _cmd_help,
             "start": _cmd_help,
         }
