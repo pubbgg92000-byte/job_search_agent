@@ -267,3 +267,96 @@ export type SkillPlanResponse = {
   seven_day_plan: LearningPlan;
   thirty_day_plan: LearningPlan;
 };
+
+// Phase 3B — apply-assist browser agent.
+export type ApplyAssistSessionState =
+  | "in_progress"
+  | "ready_for_review"
+  | "submitted"
+  | "failed"
+  | "cancelled";
+
+export type ApplyAssistSession = {
+  id: number;
+  application_id: number;
+  platform: "greenhouse" | "lever" | "ashby" | "unknown";
+  state: ApplyAssistSessionState;
+  headless: boolean;
+  job_url: string;
+  screenshot_paths: string[];
+  screenshot_count: number;
+  error_message: string | null;
+  started_at: string;
+  ready_for_review_at: string | null;
+  completed_at: string | null;
+  filled_fields: string[];
+  skipped_fields: string[];
+};
+
+export type ApplyAssistEvent = {
+  id: number;
+  event_type: string;
+  notes: string | null;
+  occurred_at: string;
+};
+
+export type ApplyAssistEnvelope = {
+  session: ApplyAssistSession;
+  events: ApplyAssistEvent[];
+  application_status?: string;
+};
+
+// Client-side ATS detection mirrors the backend `detect_platform` rules —
+// used to gate the Apply Assist button on the job detail page so we don't
+// offer it for URLs the backend will reject.
+const _ATS_HOST_RULES: [string, ApplyAssistSession["platform"]][] = [
+  ["greenhouse.io", "greenhouse"],
+  ["lever.co", "lever"],
+  ["ashbyhq.com", "ashby"],
+];
+
+const _ATS_HINT_RULES: [string, ApplyAssistSession["platform"]][] = [
+  ["gh_jid=", "greenhouse"],
+  ["lever-jobs", "lever"],
+  ["ashby_jid=", "ashby"],
+];
+
+export function detectAtsPlatform(url: string | null | undefined): ApplyAssistSession["platform"] {
+  if (!url) return "unknown";
+  let host = "";
+  let blob = "";
+  try {
+    const u = new URL(url);
+    host = u.host.toLowerCase();
+    blob = `${u.pathname} ${u.search}`.toLowerCase();
+  } catch {
+    return "unknown";
+  }
+  for (const [needle, p] of _ATS_HOST_RULES) if (host.includes(needle)) return p;
+  for (const [needle, p] of _ATS_HINT_RULES) if (blob.includes(needle)) return p;
+  return "unknown";
+}
+
+export const applyAssistApi = {
+  start: (applicationId: number) =>
+    api.post<ApplyAssistEnvelope>(
+      `/applications/${applicationId}/apply-assist/start`,
+      {},
+    ),
+  get: (applicationId: number, sessionId: number) =>
+    api.get<ApplyAssistEnvelope>(
+      `/applications/${applicationId}/apply-assist/sessions/${sessionId}`,
+    ),
+  approve: (applicationId: number, sessionId: number) =>
+    api.post<ApplyAssistEnvelope>(
+      `/applications/${applicationId}/apply-assist/sessions/${sessionId}/approve`,
+      {},
+    ),
+  cancel: (applicationId: number, sessionId: number) =>
+    api.post<ApplyAssistEnvelope>(
+      `/applications/${applicationId}/apply-assist/sessions/${sessionId}/cancel`,
+      {},
+    ),
+  screenshotUrl: (applicationId: number, sessionId: number, idx: number) =>
+    `${BASE}/applications/${applicationId}/apply-assist/sessions/${sessionId}/screenshot/${idx}`,
+};

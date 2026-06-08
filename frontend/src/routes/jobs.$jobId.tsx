@@ -4,10 +4,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import {
   api,
+  detectAtsPlatform,
   type CompanySnapshot,
   type JobDetail,
   type MatchPayload,
 } from "@/lib/api";
+import { ApplyAssistPanel } from "@/components/apply-assist-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -96,6 +98,9 @@ function JobDetailPage() {
     artifact_id: number;
   }>(null);
 
+  const [applyAssistApplicationId, setApplyAssistApplicationId] = useState<number | null>(null);
+  const [applyAssistSessionId, setApplyAssistSessionId] = useState<number | null>(null);
+
   const tailorMutation = useMutation({
     mutationFn: async () => {
       const j = job.data!;
@@ -127,7 +132,7 @@ function JobDetailPage() {
 
   const createApp = useMutation({
     mutationFn: (status: string) =>
-      api.post("/applications", {
+      api.post<{ id: number }>("/applications", {
         discovered_job_id: Number(jobId),
         status,
       }),
@@ -136,6 +141,23 @@ function JobDetailPage() {
       qc.invalidateQueries({ queryKey: ["applications"] });
     },
     onError: (e) => toast({ title: "Failed", description: (e as Error).message, kind: "error" }),
+  });
+
+  const applyAssistMutation = useMutation({
+    mutationFn: async () => {
+      // Use an existing saved application if there is one for this job, else create one.
+      const created = await api.post<{ id: number }>("/applications", {
+        discovered_job_id: Number(jobId),
+        status: "saved",
+      });
+      return created;
+    },
+    onSuccess: (created) => {
+      setApplyAssistApplicationId(created.id);
+      setApplyAssistSessionId(null);
+      qc.invalidateQueries({ queryKey: ["applications"] });
+    },
+    onError: (e) => toast({ title: "Apply Assist failed", description: (e as Error).message, kind: "error" }),
   });
 
   if (job.isLoading) return <Skeleton className="h-64 w-full" />;
@@ -202,6 +224,16 @@ function JobDetailPage() {
                 >
                   Create Application
                 </Button>
+                {detectAtsPlatform(j.url) !== "unknown" && (
+                  <Button
+                    variant="default"
+                    onClick={() => applyAssistMutation.mutate()}
+                    disabled={applyAssistMutation.isPending}
+                    data-testid="apply-assist-button"
+                  >
+                    {applyAssistMutation.isPending ? "Preparing…" : "Apply Assist"}
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -244,6 +276,36 @@ function JobDetailPage() {
           {company.data && <CompanyCard company={company.data} />}
         </div>
       </div>
+
+      <Dialog
+        open={applyAssistApplicationId != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setApplyAssistApplicationId(null);
+            setApplyAssistSessionId(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Apply Assist</DialogTitle>
+            <DialogDescription>
+              JobForge will fill the application form. You approve before it submits.
+            </DialogDescription>
+          </DialogHeader>
+          {applyAssistApplicationId != null && (
+            <ApplyAssistPanel
+              applicationId={applyAssistApplicationId}
+              sessionId={applyAssistSessionId}
+              onSessionCreated={setApplyAssistSessionId}
+              onDismiss={() => {
+                setApplyAssistApplicationId(null);
+                setApplyAssistSessionId(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={tailorOpen} onOpenChange={setTailorOpen}>
         <DialogContent className="max-w-3xl">
