@@ -8,6 +8,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jobforge
+          POSTGRES_PASSWORD: jobforge
+          POSTGRES_DB: jobforge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       ANTHROPIC_API_KEY: sk-ci-placeholder
       DATABASE_URL: postgresql+asyncpg://jobforge:jobforge@localhost:5432/jobforge
@@ -21,5 +35,7 @@ jobs:
         run: uv sync --all-extras
       - name: Lint
         run: uv run ruff check .
+      - name: Migrate
+        run: uv run alembic upgrade head
       - name: Test
         run: uv run pytest -q
